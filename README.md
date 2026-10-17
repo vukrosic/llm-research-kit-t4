@@ -1,0 +1,99 @@
+# LLM Research Kit — T4 mode
+
+Copy of [vukrosic/llm-research-kit](https://github.com/vukrosic/llm-research-kit) that also runs on free Colab/Kaggle T4 GPUs:
+
+- GPUs without native bf16 (T4, V100) train in fp16 autocast with fp32 weights and `GradScaler`; Ampere+ keeps bf16.
+- On GPUs under 24 GB, `batch_size` defaults to 2 unless `--batch_size` is given.
+- Muon's polar express runs compiled on CUDA sm70+, in fp16 on pre-Ampere GPUs, and falls back to eager if compilation fails.
+- Loss and tokens/s are logged every 25 steps (`--log_every`) to stdout and `logs/`.
+
+
+A high-performance codebase for LLM research, pretraining, and optimization: testing new architectures, optimizers, or training.
+
+- Modular transformer with GQA, RoPE, and RMSNorm
+- Muon optimizer alongside AdamW
+- Training script, flexible configuration
+
+- `models/`: Transformer layers and components (RoPE, RMSNorm, Multi-Head Attention).
+- `optimizers/`: Muon optimizer (outperforms AdamW and all others).
+- `training/`: Core trainer logic and utilities.
+- `configs/`: Hyperparameter and dataset configurations.
+- `utils/`: Logging, plotting, and helper functions.
+
+## 🚀 Getting Started
+
+#### Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Step 2: Download the Dataset
+
+The simplest path is:
+
+```bash
+python data/download_hf_data.py
+```
+
+If you are training on a remote GPU, start the run inside `tmux` so the job keeps running after you disconnect.
+
+### Option A: 1B tokens
+```bash
+python3 -c "
+from datasets import load_dataset
+import os
+print('Downloading 1B Pretraining Data...')
+ds = load_dataset('vukrosic/blueberry-1B-pretrain')
+os.makedirs('processed_data/pretrain_1B', exist_ok=True)
+ds.save_to_disk('processed_data/pretrain_1B')
+print('✅ Full Data Ready!')
+"
+```
+
+### Option B: 2B tokens
+```bash
+python3 -c "
+from datasets import load_dataset
+import os
+print('Downloading 2B Pretraining Data...')
+ds = load_dataset('vukrosic/blueberry-2B-pretrain')
+os.makedirs('processed_data/pretrain_2B', exist_ok=True)
+ds.save_to_disk('processed_data/pretrain_2B')
+print('✅ Full Data Ready!')
+"
+```
+
+### Option C: Quick Start (40M Tokens)
+```bash
+python3 -c "
+from datasets import load_dataset
+import os
+print('Downloading 40M Token Subset...')
+ds = load_dataset('vukrosic/blueberry-1B-pretrain', split='train[:20000]')
+os.makedirs('processed_data/speedrun_40M', exist_ok=True)
+ds.save_to_disk('processed_data/speedrun_40M')
+print('✅ Speedrun Data Ready!')
+"
+```
+
+## 🧠 LLM Architecture
+
+Default is an **88M parameter** transformer LLM, you can modify configs.
+
+- **Layers**: 22 Transformer blocks.
+- **Hidden Dimension (`d_model`)**: 512.
+- **Feed-Forward Dimension (`d_ff`)**: 2048.
+- **Attention System**:
+  - 8 Query heads, 4 Key-Value heads (**Grouped Query Attention**).
+  - Rotary Positional Embeddings (**RoPE**).
+  - Fused QKVO projection for optimized compute.
+  - QK-Normalization for training stability.
+- **Normalization**: Pre-norm **RMSNorm**.
+- **Activation**: **Squared ReLU** (Primer-style).
+- **Vocab Size**: 49,152.
+- **Sequence Length**: 2048 tokens.
+
+### Optimization Highlights
+- **Weight Tying**: Shared weights between token embeddings and the LM head.
+- **Muon Support**: Architecture optimized for the Muon optimizer's orthogonal updates.
+- **Efficiency**: Designed for `torch.compile` compatibility and mixed-precision (BF16) training.
