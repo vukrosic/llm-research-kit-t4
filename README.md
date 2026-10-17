@@ -7,6 +7,8 @@ Copy of [vukrosic/llm-research-kit](https://github.com/vukrosic/llm-research-kit
 - Muon's polar express runs compiled on CUDA sm70+, in fp16 on pre-Ampere GPUs, and falls back to eager if compilation fails.
 - Loss and tokens/s are logged every 25 steps (`--log_every`) to stdout and `logs/`.
 
+Step-by-step Colab T4 setup, commands and a reference result: [COLAB-T4.md](COLAB-T4.md).
+
 
 A high-performance codebase for LLM research, pretraining, and optimization: testing new architectures, optimizers, or training.
 
